@@ -238,3 +238,47 @@ class Subpage(Element):
 
         return ''.join(lines)
 
+    def to_dict(self):
+        """Return a dictionary representation of this Subpage."""
+        return {
+            "addr": self.addr,
+            "numbers": self.numbers.tolist() if hasattr(self.numbers, "tolist") else self.numbers,
+            "checksum": int(self.checksum),
+            "header": {
+                "magazine": int(self.mrag.magazine),
+                "page": int(self.header.page),
+                "subpage": int(self.header.subpage),
+                "control": int(self.header.control),
+                "codepage": int(self.header.codepage),
+            },
+            "url": self.url,
+            "duplicates": len(self.duplicates),
+            # New field for plain text:
+            "decoded_text": self.to_text(),
+        }
+
+    def to_text(self):
+        """
+        Returns a simplistic text rendition of the 24x40 display area,
+        ignoring any teletext control codes, etc.
+        """
+        lines = []
+        # Get the 24 lines by 40 columns
+        arr = self._array[1:25, 2:]
+
+        for row_idx in range(arr.shape[0]):
+            row_data = arr[row_idx, :]
+
+            # Example naive decode: strip teletext control bit, treat as ASCII
+            text_chars = []
+            for byte_val in row_data:
+                char_val = byte_val & 0x7F
+                if 32 <= char_val < 127:
+                    text_chars.append(chr(char_val))
+                else:
+                    text_chars.append(' ')  # Replace control chars with space
+
+            line_str = ''.join(text_chars).rstrip()
+            lines.append(line_str)
+
+        return '\n'.join(lines)

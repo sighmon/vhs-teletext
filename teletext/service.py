@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import textwrap
 
@@ -155,3 +156,49 @@ class Service(object):
                 )
                 outfile.write(template.format(page=pagestr, body=body))
 
+    def to_dict(self):
+        """
+        Return a dictionary representation of the entire Service:
+          {
+            magazine_id: {
+              'title': <magazine title>,
+              'pages': {
+                page_id: {
+                  subpage_id: { <subpage dictionary> },
+                  ...
+                },
+                ...
+              }
+            },
+            ...
+          }
+        """
+        service_dict = {}
+        for mag_id, magazine in sorted(self.magazines.items()):
+            # Convert mag_id to a plain int or string:
+            mag_key = int(mag_id)  # or str(mag_id)
+
+            pages_dict = {}
+            for page_id, page in sorted(magazine.pages.items()):
+                # Convert page_id
+                page_key = int(page_id)  # or str(page_id)
+
+                subpages_dict = {}
+                for subpage_id, subpage in sorted(page.subpages.items()):
+                    subpage_key = int(subpage_id)  # or str(subpage_id)
+                    subpages_dict[subpage_key] = subpage.to_dict()
+
+                pages_dict[page_key] = subpages_dict
+
+            service_dict[mag_key] = {
+                "title": magazine.title,
+                "pages": pages_dict,
+            }
+        return service_dict
+
+    def to_json(self, **json_kwargs):
+        """
+        Return a JSON-formatted string representing the entire service.
+        You can pass additional arguments to json.dumps via **json_kwargs.
+        """
+        return json.dumps(self.to_dict(), **json_kwargs)

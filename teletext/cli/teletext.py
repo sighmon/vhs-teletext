@@ -326,15 +326,31 @@ def spellcheck(packets, language, both, threads):
 @teletext.command()
 @click.option('-r', '--replace_headers', 'replace_headers', is_flag=True, default=False, help='Replace headers with a live clock.')
 @click.option('-t', '--title', 'title', type=str, default="Teletext ", help='Replace header title field with this string.')
+@click.option('--json', 'output_json', is_flag=True, default=False, help='Output the entire service as JSON instead of packets.')
 @packetwriter
 @paginated(always=True, filtered=False)
 @packetreader()
-def service(packets, replace_headers, title):
+def service(packets, replace_headers, title, output_json):
+    """
+    Build a service carousel from a t42 stream.
 
-    """Build a service carousel from a t42 stream."""
+    If --json is given, we output JSON to stdout instead of .t42 data.
+    Otherwise, we produce the usual .t42 packet output.
+    """
 
     from teletext.service import Service
-    return Service.from_packets((p for p in packets if  not p.is_padding()), replace_headers, title)
+    packets = (p for p in packets if not p.is_padding())
+    svc = Service.from_packets(packets, replace_headers, title)
+
+    if output_json:
+        json_str = svc.to_json(indent=2)
+        click.echo(json_str)
+        # Return nothing to avoid writing .t42 data:
+        return
+    else:
+        # Otherwise, yield the original .t42 packets from the service
+        # so the existing @packetwriter can handle them
+        yield from svc
 
 
 @teletext.command()
